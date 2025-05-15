@@ -2,13 +2,20 @@
 const tabs = document.querySelectorAll('.tab');
 const tabContents = document.querySelectorAll('.tab-content');
 
-// 检查是否是安卓设备
+// 检查设备类型
 const isAndroid = /Android/i.test(navigator.userAgent);
+// 特别检测华为设备
+const isHuawei = /HUAWEI|HONOR/i.test(navigator.userAgent);
 
 // 如果是安卓设备，添加安卓设备类
 if (isAndroid) {
     document.body.classList.add('android-device');
     console.log('检测到安卓设备，已启用安卓兼容模式');
+    
+    if (isHuawei) {
+        document.body.classList.add('huawei-device');
+        console.log('检测到华为设备，已启用华为专用兼容模式');
+    }
 }
 
 tabs.forEach(tab => {
@@ -52,7 +59,36 @@ let previews = [];
 let shouldInvertColors = false;
 
 // 事件监听
-uploadArea.addEventListener('click', () => fileInput.click());
+uploadArea.addEventListener('click', () => {
+    // 华为设备特殊处理
+    if (isHuawei) {
+        // 显示确认提示
+        const confirmed = confirm("检测到华为设备，是否使用推荐的多选方式选择图片？(可点击提示框中的指引操作)");
+        if (confirmed) {
+            // 创建临时input
+            const tempInput = document.createElement('input');
+            tempInput.type = 'file';
+            tempInput.accept = '.jpg,.jpeg,.png';
+            tempInput.multiple = true;
+            tempInput.setAttribute('capture', 'false');
+            
+            // 使用更合适的方式触发选择文件
+            tempInput.addEventListener('change', (e) => {
+                const files = Array.from(e.target.files);
+                if (files && files.length > 0) {
+                    validateAndProcessFiles(files);
+                }
+            });
+            
+            // 触发点击
+            tempInput.click();
+            return;
+        }
+    }
+    
+    // 默认行为
+    fileInput.click();
+});
 fileInput.addEventListener('change', handleFileSelect);
 clearBtn.addEventListener('click', clearSelection);
 invertColorsCheckbox.addEventListener('change', (e) => {
@@ -97,16 +133,49 @@ function handleFileSelect(e) {
     
     // 安卓设备兼容性处理 - 在选择完成后重置input以确保下次选择正常工作
     if (isAndroid) {
-        // 保存文件引用
-        const savedFiles = [...files];
-        
-        // 延迟重置input，避免影响当前选择
-        setTimeout(() => {
-            const newInput = fileInput.cloneNode(true);
-            newInput.addEventListener('change', handleFileSelect);
-            fileInput.parentNode.replaceChild(newInput, fileInput);
-            fileInput = newInput;
-        }, 500);
+        // 华为设备特殊处理
+        if (isHuawei) {
+            // 保存当前选择的文件
+            const savedFiles = [...files];
+            
+            // 延迟重置input，避免影响当前选择
+            setTimeout(() => {
+                // 完全删除旧的input元素并创建新的
+                const oldInput = fileInput;
+                const parent = oldInput.parentNode;
+                
+                // 创建一个全新的input元素
+                const newInput = document.createElement('input');
+                newInput.type = 'file';
+                newInput.id = 'fileInput';
+                newInput.accept = '.jpg,.jpeg,.png';
+                newInput.multiple = true;
+                newInput.className = 'hidden';
+                newInput.setAttribute('capture', 'false');
+                
+                // 替换旧元素
+                parent.replaceChild(newInput, oldInput);
+                
+                // 更新引用并添加事件监听
+                fileInput = newInput;
+                fileInput.addEventListener('change', handleFileSelect);
+                
+                // 如果当前处理过程中失去了文件引用，则恢复它们
+                if (selectedFiles.length === 0 && savedFiles.length > 0) {
+                    selectedFiles = savedFiles;
+                }
+            }, 300);
+        } else {
+            // 其他安卓设备的处理
+            const savedFiles = [...files];
+            
+            setTimeout(() => {
+                const newInput = fileInput.cloneNode(true);
+                newInput.addEventListener('change', handleFileSelect);
+                fileInput.parentNode.replaceChild(newInput, fileInput);
+                fileInput = newInput;
+            }, 500);
+        }
     }
 }
 
@@ -463,7 +532,36 @@ document.querySelectorAll('input[name="bgColor"]').forEach(radio => {
 });
 
 // 事件监听
-splitUploadArea.addEventListener('click', () => splitFileInput.click());
+splitUploadArea.addEventListener('click', () => {
+    // 华为设备特殊处理
+    if (isHuawei) {
+        // 显示确认提示
+        const confirmed = confirm("检测到华为设备，是否使用推荐的多选方式选择图片？(可点击提示框中的指引操作)");
+        if (confirmed) {
+            // 创建临时input
+            const tempInput = document.createElement('input');
+            tempInput.type = 'file';
+            tempInput.accept = '.jpg,.jpeg,.png';
+            tempInput.multiple = true;
+            tempInput.setAttribute('capture', 'false');
+            
+            // 使用更合适的方式触发选择文件
+            tempInput.addEventListener('change', (e) => {
+                const files = Array.from(e.target.files);
+                if (files && files.length > 0) {
+                    validateSplitFiles(files);
+                }
+            });
+            
+            // 触发点击
+            tempInput.click();
+            return;
+        }
+    }
+    
+    // 默认行为
+    splitFileInput.click();
+});
 splitFileInput.addEventListener('change', handleSplitFileSelect);
 splitBtn.addEventListener('click', splitImage);
 splitClearBtn.addEventListener('click', clearSplitSelection);
@@ -503,16 +601,49 @@ function handleSplitFileSelect(e) {
     
     // 安卓设备兼容性处理
     if (isAndroid) {
-        // 保存文件引用
-        const savedFiles = [...files];
-        
-        // 延迟重置input，避免影响当前选择
-        setTimeout(() => {
-            const newInput = splitFileInput.cloneNode(true);
-            newInput.addEventListener('change', handleSplitFileSelect);
-            splitFileInput.parentNode.replaceChild(newInput, splitFileInput);
-            splitFileInput = newInput;
-        }, 500);
+        // 华为设备特殊处理
+        if (isHuawei) {
+            // 保存当前选择的文件
+            const savedFiles = [...files];
+            
+            // 延迟重置input
+            setTimeout(() => {
+                // 完全删除旧的input元素并创建新的
+                const oldInput = splitFileInput;
+                const parent = oldInput.parentNode;
+                
+                // 创建一个全新的input元素
+                const newInput = document.createElement('input');
+                newInput.type = 'file';
+                newInput.id = 'splitFileInput';
+                newInput.accept = '.jpg,.jpeg,.png';
+                newInput.multiple = true;
+                newInput.className = 'hidden';
+                newInput.setAttribute('capture', 'false');
+                
+                // 替换旧元素
+                parent.replaceChild(newInput, oldInput);
+                
+                // 更新引用并添加事件监听
+                splitFileInput = newInput;
+                splitFileInput.addEventListener('change', handleSplitFileSelect);
+                
+                // 如果当前处理过程中失去了文件引用，则恢复它们
+                if (splitFiles.length === 0 && savedFiles.length > 0) {
+                    splitFiles = savedFiles;
+                }
+            }, 300);
+        } else {
+            // 其他安卓设备的处理
+            const savedFiles = [...files];
+            
+            setTimeout(() => {
+                const newInput = splitFileInput.cloneNode(true);
+                newInput.addEventListener('change', handleSplitFileSelect);
+                splitFileInput.parentNode.replaceChild(newInput, splitFileInput);
+                splitFileInput = newInput;
+            }, 500);
+        }
     }
 }
 
