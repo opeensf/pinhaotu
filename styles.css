@@ -562,4 +562,41 @@ p {
 
 .android-device .btn-primary {
     background-color: #4caf50;
-} 
+}
+
+/* 为华为设备添加的特定样式 */
+.huawei-notice {
+    display: none;
+    background-color: #ebf5ff;
+    border: 1px solid #1e88e5;
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 10px;
+    color: #0d47a1;
+    font-size: 0.9rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.huawei-device .huawei-notice {
+    display: block;
+}
+
+.huawei-device .android-notice {
+    display: none;
+}
+
+.huawei-device .upload-area {
+    border: 2px dashed #1e88e5; 
+    box-shadow: 0 0 8px rgba(30, 136, 229, 0.3);
+    background-color: #f5f9ff;
+}
+
+.huawei-device .btn-primary {
+    background-color: #1e88e5;
+    font-weight: 600;
+}
+
+.huawei-device .upload-icon {
+    color: #1e88e5;
+}
