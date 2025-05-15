@@ -395,13 +395,13 @@ const splitCanvas = document.getElementById('splitCanvas');
 const splitCtx = splitCanvas.getContext('2d');
 
 // 存储分割选项和结果
-let splitFile = null;
-let splitPreviewUrl = null;
+let splitFiles = [];        // 修改为数组，存储多张图片
+let splitPreviewUrls = [];  // 修改为数组，存储多张图片的预览URL
 let splitResults = [];
 let numPieces = 8;        // 分割成多少张图片
 let totalFragments = 100; // 总碎片数量
-let shouldInvertSplitColors = false;
 let bgColor = 'white';    // 底片颜色，默认为白色
+let shouldInvertSplitColors = false;
 
 // 更新范围滑块的值显示
 totalPiecesRange.addEventListener('input', () => {
@@ -456,33 +456,63 @@ function handleSplitDrop(e) {
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-        validateSplitFile(files[0]);
+        validateSplitFiles(files);
     }
 }
 
 function handleSplitFileSelect(e) {
     if (splitFileInput.files.length > 0) {
-        validateSplitFile(splitFileInput.files[0]);
+        validateSplitFiles(Array.from(splitFileInput.files));
     }
 }
 
-function validateSplitFile(file) {
+function validateSplitFiles(files) {
     clearSplitError();
     
     // 验证文件格式
-    if (!file.type.match(/image\/jpe?g/i)) {
+    const invalidFiles = files.filter(file => !file.type.match(/image\/jpe?g/i));
+    if (invalidFiles.length > 0) {
         showSplitError('只支持JPG/JPEG格式的图片');
         return;
     }
     
     // 存储文件并显示预览
-    splitFile = file;
-    if (splitPreviewUrl) {
-        URL.revokeObjectURL(splitPreviewUrl);
+    splitFiles = files;
+    
+    // 清除之前的预览URL
+    splitPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    splitPreviewUrls = [];
+    
+    // 创建预览区域
+    const previewContainer = document.createElement('div');
+    previewContainer.className = 'preview-container';
+    
+    // 最多显示8张预览
+    const maxPreviews = Math.min(files.length, 8);
+    for (let i = 0; i < maxPreviews; i++) {
+        const previewUrl = URL.createObjectURL(files[i]);
+        splitPreviewUrls.push(previewUrl);
+        
+        const img = document.createElement('img');
+        img.src = previewUrl;
+        img.alt = `预览图 ${i + 1}`;
+        img.className = 'preview-image';
+        previewContainer.appendChild(img);
     }
     
-    splitPreviewUrl = URL.createObjectURL(file);
-    splitPreviewImage.src = splitPreviewUrl;
+    if (files.length > 8) {
+        const message = document.createElement('p');
+        message.textContent = `...还有${files.length - 8}张图片未显示`;
+        message.style.gridColumn = '1 / -1';
+        message.style.textAlign = 'center';
+        message.style.color = '#666';
+        previewContainer.appendChild(message);
+    }
+    
+    // 替换原有的单图预览区域
+    const oldPreviewContainer = document.querySelector('#splitFileInfo .preview-container');
+    oldPreviewContainer.parentNode.replaceChild(previewContainer, oldPreviewContainer);
+    
     splitFileInfo.classList.remove('hidden');
 }
 
@@ -499,12 +529,11 @@ function clearSplitError() {
 
 function clearSplitSelection() {
     splitFileInput.value = '';
-    splitFile = null;
+    splitFiles = [];
     
-    if (splitPreviewUrl) {
-        URL.revokeObjectURL(splitPreviewUrl);
-        splitPreviewUrl = null;
-    }
+    // 清除所有预览URL
+    splitPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    splitPreviewUrls = [];
     
     splitFileInfo.classList.add('hidden');
     clearSplitError();
@@ -540,7 +569,7 @@ function displaySplitResults(totalFragmentCount) {
         
         const info = document.createElement('div');
         info.className = 'split-image-info';
-        info.textContent = `包含 ${result.fragmentCount} 个碎片`;
+        info.textContent = `${result.fileName} - ${result.fragmentCount} 碎片`;
         card.appendChild(info);
         
         const downloadBtn = document.createElement('button');
@@ -549,7 +578,9 @@ function displaySplitResults(totalFragmentCount) {
         downloadBtn.addEventListener('click', () => {
             const link = document.createElement('a');
             link.href = result.url;
-            link.download = `碎片图${result.index}.jpg`;
+            // 使用原始文件名作为下载文件名前缀
+            const ext = bgColor === 'transparent' ? 'png' : 'jpg';
+            link.download = `${result.fileName}_碎片图${result.index}_碎片数${result.fragmentCount}.${ext}`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -808,62 +839,74 @@ async function createSplitImageFromFragments(sourceImg, fragmentMask, shouldInve
 
 // 分割图像主函数
 async function splitImage() {
-    if (!splitFile) {
-        showSplitError('请先选择一张图片');
+    if (splitFiles.length === 0) {
+        showSplitError('请先选择图片');
         return;
     }
     
     try {
         splitProcessingInfo.classList.remove('hidden');
-        updateSplitProgress('正在加载图片...', 10);
-        
-        // 加载图像
-        const sourceImg = await loadImage(splitFile);
-        const width = sourceImg.width;
-        const height = sourceImg.height;
-        
-        // 设置Canvas尺寸
-        splitCanvas.width = width;
-        splitCanvas.height = height;
-        
-        updateSplitProgress('准备生成分割掩码...', 20);
+        updateSplitProgress('正在准备处理...', 5);
         
         // 清除之前的结果
         splitResults.forEach(result => URL.revokeObjectURL(result.url));
         splitResults = [];
         
-        updateSplitProgress('正在生成随机形状掩码...', 30);
+        let totalFileIndex = 0;
+        let overallTotalFragmentCount = 0;
         
-        // 使用优化的简单碎片生成算法
-        const fragmentMasks = generateSimpleFragments(width, height, numPieces, totalFragments);
-        
-        // 为每个区域创建图像
-        let totalFragmentCount = 0;
-        for (let i = 0; i < fragmentMasks.length; i++) {
-            updateSplitProgress(`正在生成第 ${i + 1}/${numPieces} 张碎片图...`, 30 + (60 * i / numPieces));
+        // 处理每张图片
+        for (const [fileIndex, file] of splitFiles.entries()) {
+            updateSplitProgress(`正在处理图片 ${fileIndex + 1}/${splitFiles.length}...`, 
+                                10 + (80 * fileIndex / splitFiles.length));
             
-            const { mask, fragmentCount } = fragmentMasks[i];
-            totalFragmentCount += fragmentCount;
+            // 加载图像
+            const sourceImg = await loadImage(file);
+            const width = sourceImg.width;
+            const height = sourceImg.height;
             
-            // 创建碎片图像
-            const imageUrl = await createSplitImageFromFragments(
-                sourceImg, 
-                mask,
-                shouldInvertSplitColors
-            );
+            // 设置Canvas尺寸
+            splitCanvas.width = width;
+            splitCanvas.height = height;
             
-            // 存储结果
-            splitResults.push({
-                index: i + 1,
-                url: imageUrl,
-                fragmentCount: fragmentCount
-            });
+            // 生成随机形状掩码
+            const fragmentMasks = generateSimpleFragments(width, height, numPieces, totalFragments);
+            
+            // 为每个区域创建图像
+            let fileTotalFragmentCount = 0;
+            for (let i = 0; i < fragmentMasks.length; i++) {
+                updateSplitProgress(
+                    `处理图片 ${fileIndex + 1}/${splitFiles.length} - 生成第 ${i + 1}/${numPieces} 张碎片图...`, 
+                    10 + (80 * (fileIndex + i/numPieces) / splitFiles.length)
+                );
+                
+                const { mask, fragmentCount } = fragmentMasks[i];
+                fileTotalFragmentCount += fragmentCount;
+                
+                // 创建碎片图像
+                const imageUrl = await createSplitImageFromFragments(
+                    sourceImg, 
+                    mask,
+                    shouldInvertSplitColors
+                );
+                
+                // 存储结果
+                splitResults.push({
+                    index: totalFileIndex + i + 1,
+                    url: imageUrl,
+                    fragmentCount: fragmentCount,
+                    fileName: file.name.replace(/\.[^/.]+$/, "") // 获取文件名（不带扩展名）
+                });
+            }
+            
+            totalFileIndex += numPieces;
+            overallTotalFragmentCount += fileTotalFragmentCount;
         }
         
         updateSplitProgress('生成预览...', 95);
         
         // 显示结果
-        displaySplitResults(totalFragmentCount);
+        displaySplitResults(overallTotalFragmentCount);
         
         updateSplitProgress('分割完成！', 100);
         setTimeout(() => {
@@ -893,7 +936,7 @@ function downloadAllSplitImages() {
                 link.href = result.url;
                 // 根据底片颜色决定文件扩展名
                 const ext = bgColor === 'transparent' ? 'png' : 'jpg';
-                link.download = `碎片图${result.index}_碎片数${result.fragmentCount}.${ext}`;
+                link.download = `${result.fileName}_碎片图${result.index}_碎片数${result.fragmentCount}.${ext}`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -918,7 +961,7 @@ function downloadAllSplitImages() {
         
         // 根据底片颜色决定文件扩展名
         const ext = bgColor === 'transparent' ? 'png' : 'jpg';
-        imgFolder.file(`碎片图${result.index}_碎片数${result.fragmentCount}.${ext}`, base64Data, { base64: true });
+        imgFolder.file(`${result.fileName}_碎片图${result.index}_碎片数${result.fragmentCount}.${ext}`, base64Data, { base64: true });
         count++;
         
         if (count === splitResults.length) {
