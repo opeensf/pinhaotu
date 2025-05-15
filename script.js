@@ -98,9 +98,9 @@ function validateAndProcessFiles(files) {
     }
     
     // 验证文件格式
-    const invalidFiles = files.filter(file => !file.type.match(/image\/jpe?g/i));
+    const invalidFiles = files.filter(file => !file.type.match(/image\/(jpe?g|png)/i));
     if (invalidFiles.length > 0) {
-        showError('只支持JPG/JPEG格式的图片');
+        showError('只支持JPG/PNG格式的图片');
         return;
     }
     
@@ -258,13 +258,20 @@ async function processImages(files) {
         
         updateProgress('开始正片叠底处理...', 40);
         
-        // 绘制第一张图片作为基础
+        // 检查第一张图片是否有透明通道
         ctx.clearRect(0, 0, width, height);
         ctx.drawImage(images[0], 0, 0);
-        
-        // 获取基础图像数据
         let imgData = ctx.getImageData(0, 0, width, height);
         let pixelData = imgData.data;
+        
+        // 判断是否有透明通道
+        let hasTransparency = false;
+        for (let i = 3; i < pixelData.length; i += 4) {
+            if (pixelData[i] < 255) {
+                hasTransparency = true;
+                break;
+            }
+        }
         
         // 逐一处理每张图片
         for (let i = 1; i < images.length; i++) {
@@ -291,12 +298,24 @@ async function processImages(files) {
                     a: overlayData[j + 3]
                 };
                 
-                const resultColor = multiplyBlend(baseColor, overlayColor);
-                
-                pixelData[j] = resultColor.r;
-                pixelData[j + 1] = resultColor.g;
-                pixelData[j + 2] = resultColor.b;
-                pixelData[j + 3] = resultColor.a;
+                // 如果两个像素都不透明，则进行正片叠底
+                if (baseColor.a > 0 && overlayColor.a > 0) {
+                    const resultColor = multiplyBlend(baseColor, overlayColor);
+                    
+                    pixelData[j] = resultColor.r;
+                    pixelData[j + 1] = resultColor.g;
+                    pixelData[j + 2] = resultColor.b;
+                    pixelData[j + 3] = Math.max(baseColor.a, overlayColor.a); // 保留较高的透明度值
+                }
+                // 如果基础像素透明但叠加像素不透明，使用叠加像素
+                else if (baseColor.a === 0 && overlayColor.a > 0) {
+                    pixelData[j] = overlayColor.r;
+                    pixelData[j + 1] = overlayColor.g;
+                    pixelData[j + 2] = overlayColor.b;
+                    pixelData[j + 3] = overlayColor.a;
+                }
+                // 如果叠加像素透明但基础像素不透明，保持基础像素不变
+                // 如果两个像素都透明，则保持透明
             }
         }
         
@@ -305,19 +324,12 @@ async function processImages(files) {
             updateProgress('正在反转色彩...', 85);
             
             for (let i = 0; i < pixelData.length; i += 4) {
-                const color = {
-                    r: pixelData[i],
-                    g: pixelData[i + 1],
-                    b: pixelData[i + 2],
-                    a: pixelData[i + 3]
-                };
-                
-                const invertedColor = invertColor(color);
-                
-                pixelData[i] = invertedColor.r;
-                pixelData[i + 1] = invertedColor.g;
-                pixelData[i + 2] = invertedColor.b;
-                pixelData[i + 3] = invertedColor.a;
+                // 只反转不透明的像素
+                if (pixelData[i + 3] > 0) {
+                    pixelData[i] = 255 - pixelData[i];         // R
+                    pixelData[i + 1] = 255 - pixelData[i + 1]; // G
+                    pixelData[i + 2] = 255 - pixelData[i + 2]; // B
+                }
             }
         }
         
@@ -326,8 +338,9 @@ async function processImages(files) {
         // 将处理后的图像数据放回canvas
         ctx.putImageData(imgData, 0, 0);
         
-        // 生成结果图像的数据URL
-        const base64 = processCanvas.toDataURL('image/jpeg');
+        // 生成结果图像的数据URL，如果有透明通道则使用PNG格式
+        const format = hasTransparency ? 'image/png' : 'image/jpeg';
+        const base64 = processCanvas.toDataURL(format);
         
         // 显示结果
         resultImage.src = base64;
@@ -358,11 +371,12 @@ function downloadResult() {
     const link = document.createElement('a');
     link.href = resultImage.src;
     
-    // 根据是否反转色彩设置下载文件名
+    // 根据是否反转色彩设置下载文件名和格式
+    const fileExt = resultImage.src.startsWith('data:image/png') ? 'png' : 'jpg';
     if (shouldInvertColors) {
-        link.download = '正片叠底-色彩反转结果.jpg';
+        link.download = `正片叠底-色彩反转结果.${fileExt}`;
     } else {
-        link.download = '正片叠底结果.jpg';
+        link.download = `正片叠底结果.${fileExt}`;
     }
     
     document.body.appendChild(link);
@@ -470,9 +484,9 @@ function validateSplitFiles(files) {
     clearSplitError();
     
     // 验证文件格式
-    const invalidFiles = files.filter(file => !file.type.match(/image\/jpe?g/i));
+    const invalidFiles = files.filter(file => !file.type.match(/image\/(jpe?g|png)/i));
     if (invalidFiles.length > 0) {
-        showSplitError('只支持JPG/JPEG格式的图片');
+        showSplitError('只支持JPG/PNG格式的图片');
         return;
     }
     
@@ -777,6 +791,15 @@ async function createSplitImageFromFragments(sourceImg, fragmentMask, shouldInve
         // 创建结果图像
         const resultData = new Uint8ClampedArray(width * height * 4);
         
+        // 判断源图像是否包含透明通道
+        let hasTransparency = false;
+        for (let i = 3; i < srcData.length; i += 4) {
+            if (srcData[i] < 255) {
+                hasTransparency = true;
+                break;
+            }
+        }
+        
         // 根据底片颜色填充背景
         for (let i = 0; i < resultData.length; i += 4) {
             if (bgColor === 'white') {
@@ -809,7 +832,12 @@ async function createSplitImageFromFragments(sourceImg, fragmentMask, shouldInve
                     resultData[dataIndex] = srcData[dataIndex];         // R
                     resultData[dataIndex + 1] = srcData[dataIndex + 1]; // G
                     resultData[dataIndex + 2] = srcData[dataIndex + 2]; // B
-                    resultData[dataIndex + 3] = 255;                    // A 设为完全不透明
+                    // 保持原图像的透明度，除非是全透明像素在透明底片上（保持透明）
+                    if (bgColor === 'transparent' && srcData[dataIndex + 3] === 0) {
+                        resultData[dataIndex + 3] = 0;  // 保持透明
+                    } else {
+                        resultData[dataIndex + 3] = 255; // 设为完全不透明
+                    }
                 }
             }
         }
@@ -831,7 +859,7 @@ async function createSplitImageFromFragments(sourceImg, fragmentMask, shouldInve
         splitCtx.putImageData(resultImgData, 0, 0);
         
         // 获取图像数据URL，透明背景时使用PNG格式，否则使用JPG
-        const format = bgColor === 'transparent' ? 'image/png' : 'image/jpeg';
+        const format = bgColor === 'transparent' || hasTransparency ? 'image/png' : 'image/jpeg';
         const dataUrl = splitCanvas.toDataURL(format);
         resolve(dataUrl);
     });
