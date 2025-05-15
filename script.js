@@ -2,6 +2,15 @@
 const tabs = document.querySelectorAll('.tab');
 const tabContents = document.querySelectorAll('.tab-content');
 
+// 检查是否是安卓设备
+const isAndroid = /Android/i.test(navigator.userAgent);
+
+// 如果是安卓设备，添加安卓设备类
+if (isAndroid) {
+    document.body.classList.add('android-device');
+    console.log('检测到安卓设备，已启用安卓兼容模式');
+}
+
 tabs.forEach(tab => {
     tab.addEventListener('click', () => {
         const tabId = tab.getAttribute('data-tab');
@@ -19,7 +28,7 @@ tabs.forEach(tab => {
 // 正片叠底合成功能
 // 元素引用
 const uploadArea = document.getElementById('uploadArea');
-const fileInput = document.getElementById('fileInput');
+let fileInput = document.getElementById('fileInput');
 const errorMessage = document.getElementById('errorMessage');
 const fileInfo = document.getElementById('fileInfo');
 const fileCount = document.getElementById('fileCount');
@@ -85,6 +94,20 @@ function handleDrop(e) {
 function handleFileSelect(e) {
     const files = Array.from(fileInput.files);
     validateAndProcessFiles(files);
+    
+    // 安卓设备兼容性处理 - 在选择完成后重置input以确保下次选择正常工作
+    if (isAndroid) {
+        // 保存文件引用
+        const savedFiles = [...files];
+        
+        // 延迟重置input，避免影响当前选择
+        setTimeout(() => {
+            const newInput = fileInput.cloneNode(true);
+            newInput.addEventListener('change', handleFileSelect);
+            fileInput.parentNode.replaceChild(newInput, fileInput);
+            fileInput = newInput;
+        }, 500);
+    }
 }
 
 // 验证和处理文件
@@ -386,7 +409,7 @@ function downloadResult() {
 
 // 图像分割功能
 const splitUploadArea = document.getElementById('splitUploadArea');
-const splitFileInput = document.getElementById('splitFileInput');
+let splitFileInput = document.getElementById('splitFileInput');
 const splitErrorMessage = document.getElementById('splitErrorMessage');
 const splitFileInfo = document.getElementById('splitFileInfo');
 const splitPreviewImage = document.getElementById('splitPreviewImage');
@@ -475,8 +498,21 @@ function handleSplitDrop(e) {
 }
 
 function handleSplitFileSelect(e) {
-    if (splitFileInput.files.length > 0) {
-        validateSplitFiles(Array.from(splitFileInput.files));
+    const files = Array.from(splitFileInput.files);
+    validateSplitFiles(files);
+    
+    // 安卓设备兼容性处理
+    if (isAndroid) {
+        // 保存文件引用
+        const savedFiles = [...files];
+        
+        // 延迟重置input，避免影响当前选择
+        setTimeout(() => {
+            const newInput = splitFileInput.cloneNode(true);
+            newInput.addEventListener('change', handleSplitFileSelect);
+            splitFileInput.parentNode.replaceChild(newInput, splitFileInput);
+            splitFileInput = newInput;
+        }, 500);
     }
 }
 

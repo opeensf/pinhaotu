@@ -38,7 +38,12 @@
                         <div class="upload-icon"><i class="fa-solid fa-file-image"></i></div>
                         <p>点击选择或拖拽文件到此处</p>
                         <p class="small">支持JPG/PNG格式，可同时上传多张图片</p>
-                        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" multiple class="hidden">
+                        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" multiple="multiple" capture="false" class="hidden">
+                    </div>
+                    
+                    <div class="android-notice">
+                        <i class="fa-solid fa-info-circle"></i> 
+                        安卓设备提示：请在文件选择器中点击"文档"，然后找到并选择您要处理的多张图片
                     </div>
                     
                     <div id="errorMessage" class="error-message hidden"></div>
@@ -90,7 +95,12 @@
                         <div class="upload-icon"><i class="fa-solid fa-image"></i></div>
                         <p>点击选择或拖拽图片到此处</p>
                         <p class="small">支持JPG/PNG格式，可同时上传多张图片</p>
-                        <input type="file" id="splitFileInput" accept=".jpg,.jpeg,.png" multiple class="hidden">
+                        <input type="file" id="splitFileInput" accept=".jpg,.jpeg,.png" multiple="multiple" capture="false" class="hidden">
+                    </div>
+                    
+                    <div class="android-notice">
+                        <i class="fa-solid fa-info-circle"></i> 
+                        安卓设备提示：请在文件选择器中点击"文档"，然后找到并选择您要处理的图片
                     </div>
                     
                     <div id="splitErrorMessage" class="error-message hidden"></div>

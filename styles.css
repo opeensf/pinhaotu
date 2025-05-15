@@ -536,4 +536,30 @@ p {
         grid-template-columns: 1fr 1fr;
         gap: 2rem;
     }
+}
+
+/* 为安卓设备添加的样式 */
+.android-notice {
+    display: none;
+    background-color: #fffde7;
+    border: 1px solid #ffd600;
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 10px;
+    color: #5d4037;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.android-device .android-notice {
+    display: block;
+}
+
+.android-device .upload-area {
+    border: 2px dashed #4caf50; 
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.2);
+}
+
+.android-device .btn-primary {
+    background-color: #4caf50;
 } 
