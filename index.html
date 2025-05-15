@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拼好图 - 图像处理工具</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fa-solid fa-image-polaroid"></i>
+                <h1>拼好图</h1>
+            </div>
+            <p>专业图像处理 · 正片叠底 · 图像分割</p>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="blend">
+                <i class="fa-solid fa-layer-group"></i>
+                <span>正片叠底合成</span>
+            </div>
+            <div class="tab" data-tab="split">
+                <i class="fa-solid fa-puzzle-piece"></i>
+                <span>图像分割</span>
+            </div>
+        </div>
+
+        <div class="tab-content active" id="blend-tab">
+            <div class="grid">
+                <div class="card">
+                    <h2><i class="fa-solid fa-upload"></i> 上传图片</h2>
+                    <p>请选择1-50张JPG格式图片进行处理，支持拖拽多个文件</p>
+                    
+                    <div id="uploadArea" class="upload-area">
+                        <div class="upload-icon"><i class="fa-solid fa-file-image"></i></div>
+                        <p>点击选择或拖拽文件到此处</p>
+                        <p class="small">仅支持JPG格式</p>
+                        <input type="file" id="fileInput" accept=".jpg,.jpeg" multiple class="hidden">
+                    </div>
+                    
+                    <div id="errorMessage" class="error-message hidden"></div>
+                    
+                    <div id="fileInfo" class="mt-4 hidden">
+                        <div class="flex justify-between items-center">
+                            <span id="fileCount"></span>
+                            <div>
+                                <button id="clearBtn" class="btn btn-outline"><i class="fa-solid fa-broom"></i> 清除选择</button>
+                            </div>
+                        </div>
+                        
+                        <div id="previewContainer" class="preview-container"></div>
+                        
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="invertColors">
+                            <label for="invertColors">正片叠底后反转色彩</label>
+                        </div>
+                        
+                        <button id="processBtn" class="btn btn-primary"><i class="fa-solid fa-wand-magic-sparkles"></i> 开始处理</button>
+                    </div>
+                    
+                    <div id="processingInfo" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p id="progressText">正在处理图片...</p>
+                        <div class="progress-container">
+                            <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="resultCard" class="card hidden">
+                    <h2 id="resultTitle"><i class="fa-solid fa-check-circle"></i> 处理结果</h2>
+                    <div class="result-container">
+                        <img id="resultImage" class="result-image" src="" alt="处理结果">
+                    </div>
+                    <button id="downloadBtn" class="btn btn-success mt-4"><i class="fa-solid fa-download"></i> 下载结果</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="split-tab">
+            <div class="grid">
+                <div class="card">
+                    <h2><i class="fa-solid fa-cut"></i> 图像分割</h2>
+                    <p>选择一张JPG图片，分割成多个碎片，只有通过正片叠底才能合成原图</p>
+                    
+                    <div id="splitUploadArea" class="upload-area">
+                        <div class="upload-icon"><i class="fa-solid fa-image"></i></div>
+                        <p>点击选择或拖拽一张图片到此处</p>
+                        <p class="small">仅支持JPG格式</p>
+                        <input type="file" id="splitFileInput" accept=".jpg,.jpeg" class="hidden">
+                    </div>
+                    
+                    <div id="splitErrorMessage" class="error-message hidden"></div>
+                    
+                    <div id="splitFileInfo" class="mt-4 hidden">
+                        <div class="preview-container single-preview">
+                            <img id="splitPreviewImage" class="preview-image" src="" alt="预览图">
+                        </div>
+                        
+                        <div class="options-panel">
+                            <div class="range-container">
+                                <label for="totalPiecesRange">总碎片数量 (40-350片)</label>
+                                <input type="range" id="totalPiecesRange" min="40" max="350" value="100">
+                                <div class="range-value"><span id="totalPiecesValue">100</span> 片</div>
+                            </div>
+                            
+                            <div class="range-container">
+                                <label for="piecesRange">分割成多少张图片 (5-15张)</label>
+                                <input type="range" id="piecesRange" min="5" max="15" value="8">
+                                <div class="range-value"><span id="piecesValue">8</span> 张</div>
+                            </div>
+                            
+                            <div class="option-container">
+                                <label>底片颜色 <span class="recommend-tag">推荐：透明</span></label>
+                                <div class="radio-group">
+                                    <label class="radio-label">
+                                        <input type="radio" name="bgColor" value="white" checked>
+                                        <span>白色</span>
+                                    </label>
+                                    <label class="radio-label">
+                                        <input type="radio" name="bgColor" value="black">
+                                        <span>黑色</span>
+                                    </label>
+                                    <label class="radio-label">
+                                        <input type="radio" name="bgColor" value="transparent">
+                                        <span>透明</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="splitInvertColors">
+                                <label for="splitInvertColors">分割后反转色彩</label>
+                            </div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button id="splitBtn" class="btn btn-primary"><i class="fa-solid fa-scissors"></i> 开始分割</button>
+                            <button id="splitClearBtn" class="btn btn-outline"><i class="fa-solid fa-broom"></i> 清除选择</button>
+                        </div>
+                    </div>
+                    
+                    <div id="splitProcessingInfo" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p id="splitProgressText">正在分割图片...</p>
+                        <div class="progress-container">
+                            <div id="splitProgressBar" class="progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="splitResultCard" class="card hidden">
+                    <h2><i class="fa-solid fa-check-circle"></i> 分割结果</h2>
+                    <p class="result-summary">总共分割成 <span id="splitResultCount">0</span> 张碎片图，共 <span id="totalFragmentsCount">0</span> 个碎片</p>
+                    
+                    <div id="splitResultContainer" class="split-images-container"></div>
+                    
+                    <button id="downloadAllBtn" class="btn btn-success download-all-btn"><i class="fa-solid fa-download"></i> 下载所有碎片</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 隐藏的Canvas用于图像处理 -->
+        <canvas id="processCanvas" style="display:none;"></canvas>
+        <canvas id="splitCanvas" style="display:none;"></canvas>
+        
+        <!-- 水印 -->
+        <footer class="watermark">
+            <p>© 拼好图 - 制作人：我是杰瑞不是小老鼠</p>
+        </footer>
+    </div>
+
+    <!-- 添加JSZip库用于打包下载 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 
