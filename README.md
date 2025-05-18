@@ -4,7 +4,8 @@
 
 ## 在线使用
 
-您可以直接访问: [https://opeensf.github.io/pinhaotu/](https://opeensf.github.io/pinhaotu/)
+您可以直接访问: [https://opeensf.github.io/pinhaotu/](https://opeensf.github.io/pinhaotu/) 
+推荐使用电脑端访问。目前在手机端上BUG尚未修复。
 
 ## 功能特点
 
