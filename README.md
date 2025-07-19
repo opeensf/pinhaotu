@@ -4,7 +4,9 @@
 
 ## 在线使用
 
-您可以直接访问: [https://opeensf.github.io/pinhaotu/](https://opeensf.github.io/pinhaotu/)
+推荐使用电脑端访问。目前在手机端上BUG尚未修复。
+
+您可以直接访问: [https://opeensf.github.io/pinhaotu/](https://opeensf.github.io/pinhaotu/) 
 
 ## 功能特点
 
@@ -62,8 +64,6 @@
 - 仅支持JPG/JPEG格式图片
 - 正片叠底合成时，所有图片必须尺寸相同
 - 处理大图片或多张图片时可能需要一定时间
-- 所有处理在浏览器本地完成，不会上传图片到任何服务器
+- 所有处理在浏览器本地完成，不会上传图片到任何服务器。
 
-## 版权信息
 
-© 拼好图 - 制作人：我是杰瑞不是小老鼠 
